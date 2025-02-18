@@ -1,0 +1,48 @@
+---
+title: Community Services Demographic Growth
+author:
+  name: Fran Barton
+  email: francis.barton1@nhs.net
+date: today
+lang: en-GB
+format: quafira-html
+embed-resources: true
+fig-dpi: 144
+fig-height: 10
+fig-width: 16.18
+fig-responsive: true
+lightbox: true
+out-width: 92%
+---
+
+
+```{r setup}
+
+library(dplyr)
+library(ggplot2)
+library(StrategyUnitTheme)
+
+csds_contacts_2022_23_provider_summary <- readRDS("csds_contacts_prov_summ.rds")
+csds_contacts_2022_23_icb_summary <- readRDS("csds_contacts_icb_summ.rds")
+popn_proj_tidy <- readRDS("popn_proj_tidy.rds")
+
+source("join_datasets.R")
+
+
+```
+
+
+
+## National contacts projection by financial year
+
+```{r chart1}
+
+
+contacts_fy_projected_national |>
+  ggplot2::ggplot(aes(fin_year, total_contacts_by_year)) +
+  ggplot2::geom_line()
+
+
+
+```
+
