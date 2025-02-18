@@ -72,9 +72,16 @@ count_fin_year_care_contacts <- function(.data, fin_year_start) {
   fye <- as.Date(paste0(as.integer(fin_year_start) + 1L, "-03-31"))
 
   .data |>
-    dplyr::filter(dplyr::if_any("contact_date", \(x) dplyr::between(x, {{ fys }}, {{ fye }}))) |>
-    dplyr::mutate(dplyr::across("age_int", \(x) dplyr::if_else(x > 90L, 90L, x))) |>
-    dplyr::count(dplyr::pick(tidyselect::all_of(count_cols())), name = "contacts")
+    dplyr::filter(
+      dplyr::if_any("contact_date", \(x) dplyr::between(x, {{ fys }}, {{ fye }}))
+    ) |>
+    dplyr::mutate(
+      dplyr::across("age_int", \(x) dplyr::if_else(x > 90L, 90L, x))
+    ) |>
+    dplyr::count(
+      dplyr::pick(tidyselect::all_of(count_cols())),
+      name = "contacts"
+    )
 }
 
 
@@ -88,12 +95,8 @@ csds_data_full_valid <- read_in_jg_data("full_contact_based_valid")
 lsoa11_lad18_lookup_ew <- read_in_reference_data("lsoa11_lad18_lookup_ew")
 # Read in Scotland and Northern Ireland area lookups, and then bind_rows()
 # ...
-# lad18_lookup_uk <- lad18_lookup_ew etc,
+# lad18_lookup_uk <- lad18_lookup_ew etc
 
-# This is a dummy version for now (it's just all providers!)
-consistent_providers <- csds_data_full_valid |>
-  dplyr::summarise(dplyr::across("OrgID_Provider", unique)) |>
-  dplyr::pull("OrgID_Provider")
 
 
 
@@ -107,9 +110,14 @@ csds_contacts_2022_23_provider_summary <- csds_data_full_valid |>
     lsoa11cd = "Der_Postcode_yr2011_LSOA",
     contact_date = "Contact_Date"
   ) |>
-  dplyr::left_join(lad18_lookup, "lsoa11cd") |>
-  dplyr::mutate(dplyr::across("age_int", \(x) dplyr::if_else(x > 90L, 90L, x))) |>
-  dplyr::count(dplyr::pick(tidyselect::all_of(provider_count_cols())), name = "contacts") |>
+  dplyr::left_join(lad18_lookup_uk, "lsoa11cd") |>
+  dplyr::mutate(
+    dplyr::across("age_int", \(x) dplyr::if_else(x > 90L, 90L, x))
+  ) |>
+  dplyr::count(
+    dplyr::pick(tidyselect::all_of(provider_count_cols())),
+    name = "contacts"
+  ) |>
   dplyr::collect() |>
   dplyr::mutate(dplyr::across(c("age_int", "contacts"), as.integer))
 
@@ -119,25 +127,27 @@ csds_contacts_2022_23_provider_summary <- readRDS("csds_contacts_prov_summ.rds")
 
 # 63,744 rows (by ICB and LA)
 csds_contacts_2022_23_icb_summary <- csds_data_full_valid |>
-  dplyr::filter(
-    dplyr::if_any("Der_Financial_Year", \(x) x == "2022/23") &
-      dplyr::if_any("OrgID_Provider", \(x) x %in% {{ consistent_providers }})
-  ) |>
+  dplyr::filter(dplyr::if_any("Der_Financial_Year", \(x) x == "2022/23")) |>
   dplyr::rename(
     age_int = "AgeYr_Contact_Date",
     gender_cat = "Gender",
     lsoa11cd = "Der_Postcode_yr2011_LSOA",
     contact_date = "Contact_Date"
   ) |>
-  dplyr::left_join(lad18_lookup, "lsoa11cd") |>
-  dplyr::mutate(dplyr::across("age_int", \(x) dplyr::if_else(x > 90L, 90L, x))) |>
-  dplyr::count(dplyr::pick(tidyselect::all_of(icb_count_cols())), name = "contacts") |>
+  dplyr::left_join(lad18_lookup_uk, "lsoa11cd") |>
+  dplyr::mutate(
+    dplyr::across("age_int", \(x) dplyr::if_else(x > 90L, 90L, x))
+  ) |>
+  dplyr::count(
+    dplyr::pick(tidyselect::all_of(icb_count_cols())),
+    name = "contacts"
+  ) |>
   dplyr::collect() |>
   dplyr::mutate(dplyr::across(c("age_int", "contacts"), as.integer))
 
 csds_contacts_2022_23_icb_summary |>
-  saveRDS("csds_contacts_icb_summ.rds")
-csds_contacts_2022_23_icb_summary <- readRDS("csds_contacts_icb_summ.rds")
+  saveRDS("csds_contacts_icb_summary.rds")
+
 
 
 
@@ -172,11 +182,16 @@ popn_proj_tidy <- popn_proj_orig |>
 
 
 saveRDS(popn_proj_tidy, "popn_proj_tidy.rds")
-popn_proj_tidy <- readRDS("popn_proj_tidy.rds")
+
+
 
 
 
 # Calculate growth coefficients per financial year ------------------------
+
+
+
+popn_proj_tidy <- readRDS("popn_proj_tidy.rds")
 
 
 # 1,245,972 rows
@@ -248,4 +263,15 @@ refine_contacts_data <- function(.data) {
 }
 
 
+csds_contacts_2022_23_icb_summary <- readRDS("csds_contacts_icb_summary.rds")
+
+# Data split by ICB (the one to be used - create extra data columns within the
+# ggplot2 pipelines in the Quarto doc)
+contacts_fy_projected_icb <- csds_contacts_2022_23_icb_summary |>
+  refine_contacts_data() |>
+  # Nesting creates a list-col "data", with a single tibble per row (per ICB)
+  tidyr::nest(.by = c("icb22cdh", "icb22nm")) |>
+  dplyr::mutate(across("data", \(x) purrr::map(x, join_popn_proj_data)))
+
+saveRDS(contacts_fy_projected_icb, "contacts_fy_projected_icb.rds")
 
