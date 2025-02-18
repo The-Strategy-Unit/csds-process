@@ -2,10 +2,6 @@
 # Load libraries ----------------------------------------------------------
 
 
-library(dplyr)
-library(dbplyr)
-library(sconn) # https://github.com/The-Strategy-Unit/sconn
-
 # Optionally run this right away to spin up the compute (it can take a while!)
 sconn::sc()
 
