@@ -23,7 +23,7 @@ common_cols <- \() c("lad18cd", "lad18nm", "age_int", "gender_cat")
 
 join_popn_proj_data <- function(x, y = popn_fy_projected) {
   x |>
-    dplyr::left_join(y, any_of(common_cols())) |>
+    dplyr::left_join(y, intersect(colnames(y), common_cols())) |>
     dplyr::mutate(
       projected_contacts = .data[["contacts"]] * .data[["growth_coeff"]]
     )
@@ -74,10 +74,10 @@ refine_contacts_data <- function(.data) {
 
 
 
-# Data split by provider
+# Data split by provider (probably not needed)
 contacts_fy_projected_provider <- csds_contacts_2022_23_provider_summary |>
   # This filter results in:
-  #   * 1,750,507 contacts with no LAD (no locatable postcode)
+  #   * 1,750,507 contacts with no LAD
   #   * 127,757 contacts with no age recorded
   #   * 143,540 contacts with gender missing or 'Unknown'
   # being excluded from the dataset.
@@ -93,7 +93,8 @@ contacts_fy_projected_provider <- csds_contacts_2022_23_provider_summary |>
 
 
 
-# Data split by ICB
+# Data split by ICB (the one to be used - create extra data columns within the
+# ggplot2 pipelines in the Quarto doc)
 contacts_fy_projected_icb <- csds_contacts_2022_23_icb_summary |>
   refine_contacts_data() |>
   # Nesting creates a list-col "data", with a single tibble per row/provider
@@ -106,7 +107,7 @@ contacts_fy_projected_icb <- csds_contacts_2022_23_icb_summary |>
 
 
 
-# Data split by local authority
+# Data split by local authority (now not needed - create in Quarto from ICB)
 contacts_fy_projected_by_la <- csds_contacts_2022_23_icb_summary |>
   refine_contacts_data() |>
   dplyr::summarise(across("contacts", sum), .by = all_of(common_cols())) |>
@@ -142,7 +143,7 @@ contacts_fy_projected_by_la <- csds_contacts_2022_23_icb_summary |>
 
 
 
-# National data
+# National data (now not needed - create in Quarto from ICB)
 contacts_fy_projected_national <- csds_contacts_2022_23_icb_summary |>
   refine_contacts_data() |>
   dplyr::summarise(across("contacts", sum), .by = all_of(common_cols())) |>
