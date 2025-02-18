@@ -15,7 +15,7 @@ sconn::sc()
 
 # https://github.com/francisbarton/boundr
 lsoa11_lad18_lookup_eng <- boundr::lookup("lsoa", "lad", within_year = 2018) |>
-  dplyr::filter(if_any("lsoa11cd", \(x) grepl("^E", x)))
+  dplyr::filter(dplyr::if_any("lsoa11cd", \(x) grepl("^E", x)))
 
 # TODO: If I left this unfiltered, we should get a load of Welsh LAs being
 # picked up. We could then use these to impute (best guess), based on provider,
@@ -93,7 +93,7 @@ count_fin_year_care_contacts <- function(.data, fin_year_start) {
     dplyr::filter(
       if_any("contact_date", \(x) dplyr::between(x, {{ fys }}, {{ fye }}))
     ) |>
-    dplyr::mutate(across("age_int", \(x) dplyr::if_else(x > 90L, 90L, x))) |>
+    dplyr::mutate(dplyr::across("age_int", \(x) dplyr::if_else(x > 90L, 90L, x))) |>
     dplyr::count(dplyr::pick(all_of(count_cols())), name = "contacts")
 }
 
@@ -110,7 +110,7 @@ lsoa11_lad18_lookup_eng <- read_in_reference_data("lsoa11_lad18_lookup_eng") |>
 
 # 327,140 rows (by provider and LA)
 csds_contacts_2022_23_provider_summary <- csds_data_full_valid |>
-  dplyr::filter(if_any("Der_Financial_Year", \(x) x == "2022/23")) |>
+  dplyr::filter(dplyr::if_any("Der_Financial_Year", \(x) x == "2022/23")) |>
   dplyr::rename(
     # https://emilyriederer.netlify.app/post/column-name-contracts/
     provider_org_id = "OrgID_Provider",
@@ -120,10 +120,10 @@ csds_contacts_2022_23_provider_summary <- csds_data_full_valid |>
     contact_date = "Contact_Date"
   ) |>
   dplyr::left_join(lsoa11_lad18_lookup_eng, "lsoa11cd") |>
-  dplyr::mutate(across("age_int", \(x) if_else(x > 90L, 90L, x))) |>
-  dplyr::count(pick(all_of(provider_count_cols())), name = "contacts") |>
+  dplyr::mutate(dplyr::across("age_int", \(x) dplyr::if_else(x > 90L, 90L, x))) |>
+  dplyr::count(dplyr::pick(tidyselect::all_of(provider_count_cols())), name = "contacts") |>
   dplyr::collect() |>
-  dplyr::mutate(across(c("age_int", "contacts"), as.integer))
+  dplyr::mutate(dplyr::across(c("age_int", "contacts"), as.integer))
 
 csds_contacts_2022_23_provider_summary |>
   saveRDS("csds_contacts_provider_summary.rds")
@@ -131,19 +131,18 @@ csds_contacts_2022_23_provider_summary |>
 
 # 327,140 rows (by provider and ICB)
 csds_contacts_2022_23_icb_summary <- csds_data_full_valid |>
-  dplyr::filter(if_any("Der_Financial_Year", \(x) x == "2022/23")) |>
+  dplyr::filter(dplyr::if_any("Der_Financial_Year", \(x) x == "2022/23")) |>
   dplyr::rename(
-    # https://emilyriederer.netlify.app/post/column-name-contracts/
     age_int = "AgeYr_Contact_Date",
     gender_cat = "Gender",
     lsoa11cd = "Der_Postcode_yr2011_LSOA",
     contact_date = "Contact_Date"
   ) |>
   dplyr::left_join(lsoa11_lad18_lookup_eng, "lsoa11cd") |>
-  dplyr::mutate(across("age_int", \(x) if_else(x > 90L, 90L, x))) |>
-  dplyr::count(pick(all_of(icb_count_cols())), name = "contacts") |>
+  dplyr::mutate(dplyr::across("age_int", \(x) if_else(x > 90L, 90L, x))) |>
+  dplyr::count(dplyr::pick(tidyselect::all_of(icb_count_cols())), name = "contacts") |>
   dplyr::collect() |>
-  dplyr::mutate(across(c("age_int", "contacts"), as.integer))
+  dplyr::mutate(dplyr::across(c("age_int", "contacts"), as.integer))
 
 csds_contacts_2022_23_icb_summary |>
   saveRDS("csds_contacts_2022_23_icb_summary.rds")
@@ -171,10 +170,10 @@ popn_proj_tidy <- popn_proj_orig |>
   )) |>
   dplyr::collect() |>
   dplyr::mutate(
-    across("gender_cat", \(x) if_else(x == 1L, "Male", "Female")),
-    across("gender_cat", as.factor),
-    across(c("age_int", "cal_yr"), as.integer),
-    across("value", as.numeric)
+    dplyr::across("gender_cat", \(x) if_else(x == 1L, "Male", "Female")),
+    dplyr::across("gender_cat", as.factor),
+    dplyr::across(c("age_int", "cal_yr"), as.integer),
+    dplyr::across("value", as.numeric)
   ) |>
   dplyr::arrange(pick("cal_yr"))
 
