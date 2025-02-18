@@ -112,7 +112,6 @@ lsoa11_lad18_lookup_eng <- read_in_reference_data("lsoa11_lad18_lookup_eng") |>
 csds_contacts_2022_23_provider_summary <- csds_data_full_valid |>
   dplyr::filter(dplyr::if_any("Der_Financial_Year", \(x) x == "2022/23")) |>
   dplyr::rename(
-    # https://emilyriederer.netlify.app/post/column-name-contracts/
     provider_org_id = "OrgID_Provider",
     age_int = "AgeYr_Contact_Date",
     gender_cat = "Gender",
