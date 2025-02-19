@@ -1,18 +1,22 @@
 ---
-title: Community Services Demographic Growth
+title: |
+  Community Services: Projected Demographic Growth
+subtitle: Projected care contacts to 2041, based on the 2022-23 CSDS dataset
 author:
   name: Fran Barton
   email: francis.barton1@nhs.net
 date: today
 lang: en-GB
-format: quafira-html
+theme: materia
 embed-resources: true
 fig-dpi: 144
 fig-height: 10
 fig-width: 16.18
 fig-responsive: true
-lightbox: true
 out-width: 92%
+execute:
+  warning: false
+  echo: false
 ---
 
 
@@ -80,15 +84,16 @@ add_broad_age_groups <- function(.data) {
 ## National contacts projection by financial year
 
 
-TODO filter only to consistent providers and attended appointments.
+TODO filter only to consistent submitters and attended appointments.
 
-Consistent providers: submitted CSDS data each month in 2022-23.
-2023-24 data includes mandatory attendance data - all providers in theory
-  should be consistent!
+Consistent submitters: submitted CSDS data each month in 2022-23.
+2023-24 data includes mandatory attendance data - all submitters in theory
+  should now be consistent!
 But for first run (Mar 2025), we will stick to 2022-23 data specifically.
 
 
 ```{r chart1}
+#| eval: false
 
 
 contacts_fy_projected_national |>
@@ -98,4 +103,3 @@ contacts_fy_projected_national |>
 
 
 ```
-
