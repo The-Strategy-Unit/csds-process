@@ -21,21 +21,22 @@ execute:
 
 
 ```{r setup}
-
 library(dplyr)
+library(forcats)
 library(ggplot2)
+library(gt)
 library(StrategyUnitTheme)
 
 icb_contacts_fy_projected <- readr::read_rds("contacts_fy_projected_icb.rds")
-consistent_providers <- readr::read_csv("consistent_providers_2022_23.csv")
+consistent_submitters <- readr::read_csv("consistent_submitters_2022_23.csv")
+
+gt::gt(dplyr::slice_head(icb_contacts_fy_projected[["data"]][[1]], n = 5))
+# gt::gt(dplyr::slice_head(consistent_submitters, n = 5))
 
 ```
 
 
 ```{r data-summary-functions}
-
-
-
 summarise_total_contacts_by_year <- function(x) {
   x |>
     purrr::map(\(x) {
@@ -47,32 +48,36 @@ summarise_total_contacts_by_year <- function(x) {
     })
 }
 
-
 add_age_groups <- function(.data) {
   .data |>
-    dplyr::mutate(age_group_cat = dplyr::case_when(
-      age_int == 0L ~ "0",
-      age_int %in% seq(1L, 4L) ~ "1-4",
-      age_int %in% seq(5L, 9L) ~ "5-9",
-      age_int %in% seq(10L, 15L) ~ "10-15",
-      age_int %in% seq(16L, 17L) ~ "16-17",
-      age_int %in% seq(18L, 34L) ~ "18-34",
-      age_int %in% seq(35L, 49L) ~ "35-49",
-      age_int %in% seq(50L, 64L) ~ "50-64",
-      age_int %in% seq(65L, 74L) ~ "65-74",
-      .default = "85+"
-    ))
+    dplyr::mutate(
+      age_group_cat = dplyr::case_when(
+        age_int == 0L ~ "0",
+        age_int %in% seq(1L, 4L) ~ "1-4",
+        age_int %in% seq(5L, 9L) ~ "5-9",
+        age_int %in% seq(10L, 15L) ~ "10-15",
+        age_int %in% seq(16L, 17L) ~ "16-17",
+        age_int %in% seq(18L, 34L) ~ "18-34",
+        age_int %in% seq(35L, 49L) ~ "35-49",
+        age_int %in% seq(50L, 64L) ~ "50-64",
+        age_int %in% seq(65L, 74L) ~ "65-74",
+        .default = "85+"
+      ),
+      across(age_group_cat, fct_inorder)
+    )
 }
 
 # Purely invented new groupings - they might be useful for some charts?
 add_broad_age_groups <- function(.data) {
   .data |>
-    dplyr::mutate(broad_age_cat = dplyr::case_when(
-      age_int %in% seq(0L, 15L) ~ "0-15",
-      age_int %in% seq(16L, 49L) ~ "16-49",
-      age_int %in% seq(50L, 74L) ~ "50-74",
-      .default = "75+"
-    ))
+    dplyr::mutate(
+      broad_age_cat = dplyr::case_when(
+        age_int %in% seq(0L, 15L) ~ "0-15",
+        age_int %in% seq(16L, 49L) ~ "16-49",
+        age_int %in% seq(50L, 74L) ~ "50-74",
+        .default = "75+"
+      )
+    )
 }
 
 
@@ -87,8 +92,9 @@ add_broad_age_groups <- function(.data) {
 TODO filter only to consistent submitters and attended appointments.
 
 Consistent submitters: submitted CSDS data each month in 2022-23.
-2023-24 data includes mandatory attendance data - all submitters in theory
-  should now be consistent!
+(2023-24 data includes mandatory attendance data - all submitters in theory
+  should then be consistent!)
+
 But for first run (Mar 2025), we will stick to 2022-23 data specifically.
 
 
