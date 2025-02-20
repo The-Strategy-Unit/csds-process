@@ -2,7 +2,6 @@
 # Helper functions --------------------------------------------------------
 
 
-
 read_in_jg_data <- function(table_name) {
   sconn::sc() |>
     dplyr::tbl(dbplyr::in_catalog("strategyunit", "csds_jg", table_name))
@@ -22,29 +21,38 @@ read_in_reference_data <- function(table_name) {
 # Contains 191mn rows
 # Data for each care contact from 2021-04-01 to 2023-03-31
 csds_data_full_valid <- read_in_jg_data("full_contact_based_valid")
+lsoa11_lad18_lookup_eng <- read_in_reference_data("lsoa11_lad18_lookup_eng")
+consistent_submitters <- readr::read_csv("consistent_submttrs_2022_23.csv")[[1]]
 
 icb_cols <- c("icb22cdh", "icb22nm")
 group_cols <- c(
-  "provider_org_id",
   "lad18cd",
-  "lad18nm",
   "age_int",
-  "gender_cat"
+  "gender_cat",
+  "consistent"
 )
 
 
-# 63,744 rows (by ICB and LA)
+
+
+# 111,079 rows
 csds_contacts_2022_23_icb_summary <- csds_data_full_valid |>
-  dplyr::filter(dplyr::if_any("Der_Financial_Year", \(x) x == "2022/23")) |>
+  dplyr::filter(
+    dplyr::if_any("Der_Financial_Year", \(x) x == "2022/23") &
+      dplyr::if_any("Der_Postcode_yr2011_LSOA", \(x) grepl("^E", x))
+  ) |>
   dplyr::rename(
     age_int = "AgeYr_Contact_Date",
     gender_cat = "Gender",
     lsoa11cd = "Der_Postcode_yr2011_LSOA",
-    contact_date = "Contact_Date"
+    contact_date = "Contact_Date",
+    submitter_id = "OrgID_Provider"
   ) |>
-  dplyr::left_join(lad18_lookup_uk, "lsoa11cd") |>
+  dplyr::left_join(lsoa11_lad18_lookup_eng, "lsoa11cd") |>
   dplyr::mutate(
-    dplyr::across("age_int", \(x) dplyr::if_else(x > 90L, 90L, x))
+    consistent = (submitter_id %in% {{ consistent_submitters }}),
+    dplyr::across("age_int", \(x) dplyr::if_else(x > 90L, 90L, x)),
+    .keep = "unused"
   ) |>
   dplyr::count(
     dplyr::pick(tidyselect::all_of(c(icb_cols, group_cols))),
@@ -58,11 +66,10 @@ csds_contacts_2022_23_icb_summary <- csds_data_full_valid |>
 
 # Population projections data ---------------------------------------------
 
-
-ppp_locn <- "/Volumes/su_data/nhp/population-projections/demographic_data"
-
+pps_folder <- "/Volumes/su_data/nhp/population-projections/demographic_data/"
+ppp_location <- paste0(pps_folder, "projection=principal_proj")
 popn_proj_orig <- sconn::sc() |>
-  sparklyr::spark_read_parquet("popn_proj_data", ppp_locn)
+  sparklyr::spark_read_parquet("popn_proj_data", ppp_location)
 
 # 1,305,304 rows
 popn_proj_tidy <- popn_proj_orig |>
@@ -89,7 +96,6 @@ popn_proj_tidy <- popn_proj_orig |>
 
 
 
-
 # Calculate growth coefficients per financial year ------------------------
 
 
@@ -112,8 +118,10 @@ popn_fy_projected <- readr::read_rds("popn_proj_tidy.rds") |>
 join_popn_proj_data <- function(x, y = popn_fy_projected) {
   x |>
     dplyr::left_join(y, intersect(colnames(y), group_cols)) |>
+    dplyr::select(!"lad18cd") |>
     dplyr::mutate(
-      projected_contacts = .data[["contacts"]] * .data[["growth_coeff"]]
+      projected_contacts = .data[["contacts"]] * .data[["growth_coeff"]],
+      .keep = "unused"
     )
 }
 
@@ -122,7 +130,6 @@ join_popn_proj_data <- function(x, y = popn_fy_projected) {
 refine_contacts_data <- function(.data) {
   .data |>
     dplyr::filter(
-      dplyr::if_any("lad18cd", \(x) !is.na(x)) &
         dplyr::if_any("age_int", \(x) !is.na(x)) &
         dplyr::if_any("gender_cat", \(x) x %in% c("Female", "Male"))
     )
@@ -133,9 +140,8 @@ refine_contacts_data <- function(.data) {
 # Data split by ICB (the one to be used - create extra data columns within the
 # ggplot2 pipelines in the Quarto doc)
 contacts_fy_projected_icb <- readr::read_rds("csds_contacts_icb_summary.rds") |>
-  refine_contacts_data() |>
+  refine_contacts_data() |> # removes 2,248 rows
   # Nesting creates a list-col "data", with a single tibble per row (per ICB)
-  tidyr::nest(.by = tidyselect::all_of(icb_cols)) |>
+  tidyr::nest(.by = tidyselect::all_of(c(icb_cols, "consistent"))) |>
   dplyr::mutate(across("data", \(x) purrr::map(x, join_popn_proj_data))) |>
   readr::write_rds("contacts_fy_projected_icb.rds")
-
