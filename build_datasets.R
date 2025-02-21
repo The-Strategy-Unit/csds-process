@@ -13,7 +13,6 @@ read_in_reference_data <- function(table_name) {
 
 
 
-
 # Read in data tables -----------------------------------------------------
 
 
@@ -61,7 +60,6 @@ csds_contacts_2022_23_icb_summary <- csds_data_full_valid |>
   dplyr::collect() |>
   dplyr::mutate(dplyr::across(c("age_int", "contacts"), as.integer)) |>
   readr::write_rds("csds_contacts_icb_summary.rds")
-
 
 
 # Population projections data ---------------------------------------------
