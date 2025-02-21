@@ -118,11 +118,11 @@ popn_fy_projected <- readr::read_rds("popn_proj_tidy.rds") |>
 join_popn_proj_data <- function(x, y = popn_fy_projected) {
   x |>
     dplyr::left_join(y, intersect(colnames(y), group_cols)) |>
-    dplyr::select(!"lad18cd") |>
     dplyr::mutate(
       projected_contacts = .data[["contacts"]] * .data[["growth_coeff"]],
       .keep = "unused"
-    )
+    ) |>
+    dplyr::select(!c("lad18cd")) # possibly drop gender_cat also?
 }
 
 

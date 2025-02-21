@@ -7,9 +7,11 @@ author:
   email: francis.barton1@nhs.net
 date: today
 lang: en-GB
-theme: materia
+theme: sandstone
+mainfont: "Segoe UI"
+lightbox: true
 embed-resources: true
-fig-dpi: 144
+fig-dpi: 96
 fig-height: 10
 fig-width: 16.18
 fig-responsive: true
@@ -17,26 +19,111 @@ out-width: 92%
 execute:
   warning: false
   echo: false
+knitr:
+  opts_chunk:
+    dev: "ragg_png"
 ---
 
+```{scss}
+
+:root {
+  // --bs-body-color: #9d928a; // SU "light charcoal" palette colour
+  --bs-body-color: #595959; // R colour grey35
+  --bs-body-bg: #faf0e6; // "linen"
+}
+
+```
 
 ```{r setup}
 library(dplyr)
 library(forcats)
 library(ggplot2)
 library(gt)
+library(ragg)
 library(StrategyUnitTheme)
+library(systemfonts)
 
-icb_contacts_fy_projected <- readr::read_rds("contacts_fy_projected_icb.rds")
-consistent_submitters <- readr::read_csv("consistent_submitters_2022_23.csv")
+contacts_data <- readr::read_rds("contacts_fy_projected_icb.rds")
 
-gt::gt(dplyr::slice_head(icb_contacts_fy_projected[["data"]][[1]], n = 5))
-# gt::gt(dplyr::slice_head(consistent_submitters, n = 5))
+# text_grey <- "#3e3f3a" # sandstone theme default text colour
+# text_grey <- su_theme_cols("light_charcoal")
+text_grey <- "grey35"
+
+su_chart_theme <- function(font_family = "Segoe UI") {
+  su_slate <- su_theme_cols("light_slate")
+  dark_slate <- su_theme_cols("dark_slate")
+  l_orange <- su_theme_cols("light_orange")
+  slate_tr <- "#b2b7b999"
+  coral_tr <- "#ff7f5099"
+  ggplot2::theme(
+    text = element_text(family = font_family, size = 24, colour = dark_slate),
+    title = element_text(hjust = 0.05, face = "bold"),
+    plot.title = element_text(
+      size = 32,
+      margin = margin(20, 8, 12, 18)
+    ),
+    plot.subtitle = element_text(face = "plain", margin = margin(2, 0, 2, 20)),
+    plot.caption = element_text(
+      hjust = 0.96,
+      face = "plain",
+      size = 20,
+      margin = margin(12, 6, 6, 0)
+    ),
+    plot.title.position = "plot",
+    plot.background = element_rect(fill = "linen", colour = NA),
+    plot.margin = margin(6, 24, 6, 6),
+    panel.background = element_rect(fill = "linen"),
+    legend.title = element_text(hjust = 0, margin = margin(b = 8)),
+    legend.background = element_rect(fill = "linen"),
+    legend.margin = margin(r = 30),
+    legend.key = element_rect(fill = "linen"),
+    legend.key.spacing.y = grid::unit(3, "mm"),
+    legend.key.width = unit(18, "mm"),
+    legend.text = element_text(margin = margin(l = 16), hjust = 1),
+    panel.grid.major = element_line(
+      colour = slate_tr,
+      linewidth = 0.2,
+      lineend = "butt"
+    ),
+    panel.grid.minor = element_line(
+      colour = coral_tr,
+      linewidth = 0.1,
+      lineend = "butt"
+    ),
+    # panel.grid.major = element_blank(),
+    # panel.grid.minor = element_blank(),
+    axis.line = element_blank(),
+    # axis.line = element_line(
+    #   colour = "#b2b7b9",
+    #   linewidth = 1.5,
+    #   lineend = c("round", "butt")
+    # ),
+    axis.ticks = element_blank(),
+    # axis.ticks = element_line(
+    #   colour = slate_tr,
+    #   linewidth = 1.5,
+    #   lineend = c("round", "butt"),
+    # ),
+    # axis.title.x = element_text(margin = margin(t = 8, b = 18)),
+    # axis.title.y = element_text(margin = margin(r = 8, l = 18)),
+    axis.text.x = element_text(
+      angle = 45,
+      vjust = 0.5,
+      hjust = 0.5,
+      margin = margin(t = 8, b = 16)
+    ),
+    axis.text.y = element_text(margin = margin(r = 4, l = 16)),
+    strip.background = element_rect(fill = dark_slate, colour = NA),
+    strip.text = element_text(colour = "grey95", size = 14),
+    validate = TRUE
+  )
+}
 
 ```
 
 
 ```{r data-summary-functions}
+
 summarise_total_contacts_by_year <- function(x) {
   x |>
     purrr::map(\(x) {
