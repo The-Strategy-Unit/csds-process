@@ -189,12 +189,47 @@ add_broad_age_groups <- function(.data) {
 
 
 ```{r chart1}
-#| eval: false
+contacts_data <- contacts_data |>
+  dplyr::filter(if_any("consistent"))
 
+national_contacts <- contacts_data |>
+  dplyr::pull("data") |>
+  dplyr::bind_rows() |>
+  dplyr::summarise(
+    across(c("fin_year_popn", "projected_contacts"), \(x) round(sum(x))),
+    .by = c("fin_year", "age_int", "gender_cat") # is gender still needed?
+  )
 
-contacts_fy_projected_national |>
-  ggplot2::ggplot(aes(fin_year, total_contacts_by_year)) +
-  ggplot2::geom_line()
+national_contacts |>
+  add_broad_age_groups() |>
+  dplyr::summarise(
+    dplyr::across("projected_contacts", sum),
+    .by = c("fin_year", "broad_age_cat")
+  ) |>
+  ggplot2::ggplot(aes(fin_year, projected_contacts)) +
+  ggplot2::geom_line(
+    aes(colour = broad_age_cat, group = broad_age_cat),
+    linewidth = 1.8
+  ) +
+  ggplot2::labs(
+    title = "Projected contacts by broad age group, 2022/23 - 2042/43",
+    x = NULL, y = NULL
+  ) +
+  ggplot2::scale_y_continuous(
+    labels = scales::label_number(scale = 1e-6, suffix = "mn"),
+    limits = c(0, 6e7)
+  ) +
+  ggplot2::scale_x_discrete(
+    breaks = \(x) x[seq(1, length(x), 5)],
+    labels = \(x) sub("_", "/", x)
+  ) +
+  scale_colour_su(name = "Age group") +
+  su_chart_theme() +
+  ggplot2::theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.9, 0.6)
+  )
+
 
 
 
