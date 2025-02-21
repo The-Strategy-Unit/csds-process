@@ -11,7 +11,7 @@ theme: sandstone
 mainfont: "Segoe UI"
 lightbox: true
 embed-resources: true
-fig-dpi: 96
+fig-dpi: 108
 fig-height: 10
 fig-width: 16.18
 fig-responsive: true
@@ -40,6 +40,7 @@ library(forcats)
 library(ggplot2)
 library(gt)
 library(ragg)
+library(scales)
 library(StrategyUnitTheme)
 library(systemfonts)
 
@@ -53,20 +54,17 @@ su_chart_theme <- function(font_family = "Segoe UI") {
   su_slate <- su_theme_cols("light_slate")
   dark_slate <- su_theme_cols("dark_slate")
   l_orange <- su_theme_cols("light_orange")
-  slate_tr <- "#b2b7b999"
+  slate_tr <- "#b2b7b977"
   coral_tr <- "#ff7f5099"
   ggplot2::theme(
     text = element_text(family = font_family, size = 24, colour = dark_slate),
     title = element_text(hjust = 0.05, face = "bold"),
-    plot.title = element_text(
-      size = 32,
-      margin = margin(20, 8, 12, 18)
-    ),
-    plot.subtitle = element_text(face = "plain", margin = margin(2, 0, 2, 20)),
+    plot.title = element_text(size = 32, margin = margin(20, 8, 12, 18)),
+    plot.subtitle = element_text(face = "plain", margin = margin(2, 0, 12, 20)),
     plot.caption = element_text(
       hjust = 0.96,
       face = "plain",
-      size = 20,
+      size = 16,
       margin = margin(12, 6, 6, 0)
     ),
     plot.title.position = "plot",
@@ -119,24 +117,18 @@ su_chart_theme <- function(font_family = "Segoe UI") {
   )
 }
 
+nc_lon_icb <- "QMJ"
+blackc_icb <- "QUA"
+dorset_icb <- "QVV"
+
 ```
 
 
 ```{r data-summary-functions}
 
-summarise_total_contacts_by_year <- function(x) {
-  x |>
-    purrr::map(\(x) {
-      x |>
-        dplyr::summarise(
-          dplyr::across("projected_contacts", sum),
-          .by = "fin_year"
-        )
-    })
-}
-
 add_age_groups <- function(.data) {
   .data |>
+    dplyr::arrange(dplyr::pick("age_int")) |>
     dplyr::mutate(
       age_group_cat = dplyr::case_when(
         age_int == 0L ~ "0",
@@ -158,6 +150,7 @@ add_age_groups <- function(.data) {
 
 add_broad_age_groups <- function(.data) {
   .data |>
+    dplyr::arrange(dplyr::pick("age_int")) |>
     dplyr::mutate(
       broad_age_cat = dplyr::case_when(
         age_int %in% seq(0L, 15L) ~ "0-15",
@@ -169,7 +162,6 @@ add_broad_age_groups <- function(.data) {
       .keep = "unused"
     )
 }
-
 
 
 
@@ -188,7 +180,7 @@ add_broad_age_groups <- function(.data) {
 ## National contacts projection by financial year
 
 
-```{r chart1}
+```{r charts1}
 contacts_data <- contacts_data |>
   dplyr::filter(if_any("consistent"))
 
@@ -212,11 +204,11 @@ national_contacts |>
     linewidth = 1.8
   ) +
   ggplot2::labs(
-    title = "Projected contacts by broad age group, 2022/23 - 2042/43",
+    title = "Projected contacts (national) by broad age group, 2022/23 - 2042/43",
     x = NULL, y = NULL
   ) +
   ggplot2::scale_y_continuous(
-    labels = scales::label_number(scale = 1e-6, suffix = "mn"),
+    labels = label_number(scale = 1e-6, suffix = "mn"),
     limits = c(0, 6e7)
   ) +
   ggplot2::scale_x_discrete(
@@ -231,6 +223,149 @@ national_contacts |>
   )
 
 
+
+
+```
+
+
+
+## ICB-level contacts projection by financial year
+
+```{r charts2}
+dorset_contacts <- contacts_data |>
+  dplyr::filter(if_any("icb22cdh", \(x) x == {{ dorset_icb }})) |>
+  dplyr::pull("data") |>
+  dplyr::bind_rows() |>
+  dplyr::summarise(
+    across(c("fin_year_popn", "projected_contacts"), \(x) round(sum(x))),
+    .by = c("fin_year", "age_int", "gender_cat") # is gender still needed?
+  )
+
+blackc_contacts <- contacts_data |>
+  dplyr::filter(if_any("icb22cdh", \(x) x == {{ blackc_icb }})) |>
+  dplyr::pull("data") |>
+  dplyr::bind_rows() |>
+  dplyr::summarise(
+    across(c("fin_year_popn", "projected_contacts"), \(x) round(sum(x))),
+    .by = c("fin_year", "age_int", "gender_cat") # is gender still needed?
+  )
+
+dorset_contacts |>
+  add_broad_age_groups() |>
+  dplyr::summarise(
+    dplyr::across("projected_contacts", sum),
+    .by = c("fin_year", "broad_age_cat")
+  ) |>
+  ggplot2::ggplot(aes(fin_year, projected_contacts)) +
+  ggplot2::geom_line(
+    aes(colour = broad_age_cat, group = broad_age_cat),
+    linewidth = 1.8
+  ) +
+  ggplot2::labs(
+    title = "Projected contacts (single ICB) by broad age group, 2022/23 - 2042/43",
+    x = NULL,
+    y = NULL
+  ) +
+  ggplot2::scale_y_continuous(
+    labels = label_number(scale = 1e-3, suffix = "k"),
+    limits = c(0, NA)
+  ) +
+  ggplot2::scale_x_discrete(
+    breaks = \(x) x[seq(1, length(x), 5)],
+    labels = \(x) sub("_", "/", x)
+  ) +
+  scale_colour_su(name = "Age group") +
+  su_chart_theme() +
+  ggplot2::theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.9, 0.6)
+  )
+
+blackc_contacts |>
+  add_broad_age_groups() |>
+  dplyr::summarise(
+    dplyr::across("projected_contacts", sum),
+    .by = c("fin_year", "broad_age_cat")
+  ) |>
+  ggplot2::ggplot(aes(fin_year, projected_contacts)) +
+  ggplot2::geom_line(
+    aes(colour = broad_age_cat, group = broad_age_cat),
+    linewidth = 1.8
+  ) +
+  ggplot2::labs(
+    title = "Projected contacts (single ICB) by broad age group, 2022/23 - 2042/43",
+    x = NULL,
+    y = NULL
+  ) +
+  ggplot2::scale_y_continuous(
+    labels = label_number(scale = 1e-3, suffix = "k"),
+    limits = c(0, NA)
+  ) +
+  ggplot2::scale_x_discrete(
+    breaks = \(x) x[seq(1, length(x), 5)],
+    labels = \(x) sub("_", "/", x)
+  ) +
+  scale_colour_su(name = "Age group") +
+  su_chart_theme() +
+  ggplot2::theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.9, 0.72)
+  )
+
+
+
+```
+
+
+
+## % change in contacts by age group, 2022/23 - 2042/43
+
+```{r, charts3}
+list(national = national_contacts, icb = dorset_contacts) |>
+  dplyr::bind_rows(.id = "type") |>
+  add_age_groups() |>
+  dplyr::summarise(
+    value = sum(.data[["projected_contacts"]]),
+    .by = c("type", "fin_year", "age_group_cat")
+  ) |>
+  dplyr::filter(if_any("fin_year", \(x) grepl("^20[24]2", x))) |>
+  tidyr::pivot_wider(
+    id_cols = c("type", "age_group_cat"),
+    names_from = "fin_year",
+    names_prefix = "yr_"
+  ) |>
+  dplyr::mutate(
+    pct_change = (.data[["yr_2042_43"]] - .data[["yr_2022_23"]]) /
+      .data[["yr_2022_23"]],
+    .keep = "unused"
+  ) |>
+  ggplot2::ggplot(aes(age_group_cat, pct_change)) +
+  ggplot2::geom_col(aes(fill = type), position = "dodge", width = 0.75) +
+  ggplot2::geom_hline(yintercept = 0, linewidth = 0.4, colour = text_grey) +
+  ggplot2::labs(
+    title = "Projected % change in total contacts, by age group, 2022/23 - 2042/43",
+    subtitle = paste0(
+      "This chart shows changes within a single selected ICB compared to ",
+      "national (England) changes"
+    ),
+    caption = paste0(
+      "Sources: NHS England Community Services Dataset (2022-23), ",
+      "ONS Population projections"
+    ),
+    x = "Age group",
+    y = "% change"
+  ) +
+  ggplot2::scale_y_continuous(
+    labels = label_percent(suffix = ""),
+    limits = c(-0.25, NA)
+  ) +
+  scale_fill_su(name = NULL) +
+  su_chart_theme() +
+  ggplot2::theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.15, 0.72),
+    legend.text = element_text(margin = margin(l = 6), hjust = 0)
+  )
 
 
 ```
