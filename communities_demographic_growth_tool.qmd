@@ -148,13 +148,14 @@ add_age_groups <- function(.data) {
         age_int %in% seq(35L, 49L) ~ "35-49",
         age_int %in% seq(50L, 64L) ~ "50-64",
         age_int %in% seq(65L, 74L) ~ "65-74",
+        age_int %in% seq(75L, 84L) ~ "75-84",
         .default = "85+"
       ),
-      across(age_group_cat, fct_inorder)
+      across(age_group_cat, forcats::fct_inorder),
+      .keep = "unused"
     )
 }
 
-# Purely invented new groupings - they might be useful for some charts?
 add_broad_age_groups <- function(.data) {
   .data |>
     dplyr::mutate(
@@ -163,7 +164,9 @@ add_broad_age_groups <- function(.data) {
         age_int %in% seq(16L, 49L) ~ "16-49",
         age_int %in% seq(50L, 74L) ~ "50-74",
         .default = "75+"
-      )
+      ),
+      across(broad_age_cat, forcats::fct_inorder),
+      .keep = "unused"
     )
 }
 
@@ -173,16 +176,16 @@ add_broad_age_groups <- function(.data) {
 ```
 
 
+```{r data-quality}
+
+# Data quality calculations go here, before we filter to consistent only.
+
+
+
+```
+
+
 ## National contacts projection by financial year
-
-
-TODO filter only to consistent submitters and attended appointments.
-
-Consistent submitters: submitted CSDS data each month in 2022-23.
-(2023-24 data includes mandatory attendance data - all submitters in theory
-  should then be consistent!)
-
-But for first run (Mar 2025), we will stick to 2022-23 data specifically.
 
 
 ```{r chart1}
