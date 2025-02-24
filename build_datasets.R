@@ -21,30 +21,27 @@ read_in_reference_data <- function(table_name) {
 # Data for each care contact from 2021-04-01 to 2023-03-31
 csds_data_full_valid <- read_in_jg_data("full_contact_based_valid")
 lsoa11_lad18_lookup_eng <- read_in_reference_data("lsoa11_lad18_lookup_eng")
-consistent_submitters <- readr::read_csv("consistent_submttrs_2022_23.csv")[[1]]
+consistent_submitters <- here::here("consistent_submitters_2022_23.csv") |>
+  readr::read_csv(col_types = "c") |>
+  dplyr::pull("provider_org_id")
 
 icb_cols <- c("icb22cdh", "icb22nm")
-group_cols <- c(
-  "lad18cd",
-  "age_int",
-  "gender_cat",
-  "consistent"
-)
+dq_cols <- c("consistent", "attendance_status")
+join_cols <- c("lad18cd", "age_int", "gender_cat")
 
 
 
 
 # 111,079 rows
 csds_contacts_2022_23_icb_summary <- csds_data_full_valid |>
-  dplyr::filter(
-    dplyr::if_any("Der_Financial_Year", \(x) x == "2022/23")
-  ) |>
+  dplyr::filter(dplyr::if_any("Der_Financial_Year", \(x) x == "2022/23")) |>
   dplyr::rename(
     age_int = "AgeYr_Contact_Date",
     gender_cat = "Gender",
     lsoa11cd = "Der_Postcode_yr2011_LSOA",
     contact_date = "Contact_Date",
-    submitter_id = "OrgID_Provider"
+    submitter_id = "OrgID_Provider",
+    attendance_status = "AttendanceOutcomeSU"
   ) |>
   dplyr::left_join(lsoa11_lad18_lookup_eng, "lsoa11cd") |>
   dplyr::mutate(
@@ -53,7 +50,7 @@ csds_contacts_2022_23_icb_summary <- csds_data_full_valid |>
     .keep = "unused"
   ) |>
   dplyr::count(
-    dplyr::pick(tidyselect::all_of(c(icb_cols, group_cols))),
+    dplyr::pick(tidyselect::all_of(c(icb_cols, dq_cols, join_cols))),
     name = "contacts"
   ) |>
   dplyr::collect() |>
@@ -114,7 +111,7 @@ popn_fy_projected <- readr::read_rds("popn_proj_tidy.rds") |>
 
 join_popn_proj_data <- function(x, y = popn_fy_projected) {
   x |>
-    dplyr::left_join(y, intersect(colnames(y), group_cols)) |>
+    dplyr::left_join(y, join_cols) |>
     dplyr::mutate(
       projected_contacts = .data[["contacts"]] * .data[["growth_coeff"]],
       .keep = "unused"
