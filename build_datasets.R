@@ -120,22 +120,8 @@ join_popn_proj_data <- function(x, y = popn_fy_projected) {
 }
 
 
-
-refine_contacts_data <- function(.data) {
-  .data |>
-    dplyr::filter(
-        dplyr::if_any("age_int", \(x) !is.na(x)) &
-        dplyr::if_any("gender_cat", \(x) x %in% c("Female", "Male"))
-    )
-}
-
-
-
-# Data split by ICB (the one to be used - create extra data columns within the
-# ggplot2 pipelines in the Quarto doc)
 contacts_fy_projected_icb <- readr::read_rds("csds_contacts_icb_summary.rds") |>
-  refine_contacts_data() |> # removes 2,248 rows
   # Nesting creates a list-col "data", with a single tibble per row (per ICB)
-  tidyr::nest(.by = tidyselect::all_of(c(icb_cols, "consistent"))) |>
+  tidyr::nest(.by = tidyselect::all_of(c(icb_cols, dq_cols))) |>
   dplyr::mutate(across("data", \(x) purrr::map(x, join_popn_proj_data))) |>
   readr::write_rds("contacts_fy_projected_icb.rds")
