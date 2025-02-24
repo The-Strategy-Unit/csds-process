@@ -37,8 +37,7 @@ group_cols <- c(
 # 111,079 rows
 csds_contacts_2022_23_icb_summary <- csds_data_full_valid |>
   dplyr::filter(
-    dplyr::if_any("Der_Financial_Year", \(x) x == "2022/23") &
-      dplyr::if_any("Der_Postcode_yr2011_LSOA", \(x) grepl("^E", x))
+    dplyr::if_any("Der_Financial_Year", \(x) x == "2022/23")
   ) |>
   dplyr::rename(
     age_int = "AgeYr_Contact_Date",
